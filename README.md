@@ -43,6 +43,38 @@ A API tambem devolve tres estagios de despesa por registro: `empenhado`,
 `liquidado` e `pago`. Uso `pago` como "valor" no dashboard, que é o
 numero mais proximo de "dinheiro que realmente saiu do caixa".
 
+## Principais insights (dados reais, 2019-2025)
+
+Isso não é só um pipeline que funciona - o dado real conta uma historia.
+Rodei os numeros de tras dos 8 ministerios configurados e achei isso:
+
+1. **Crescimento composto de 10,7% ao ano** entre 2019 e 2025 (CAGR).
+2. **O salto de 2020 (+72% num ano só) tem uma causa isolada:** o
+   Ministerio do Desenvolvimento Social cresceu **759%** naquele ano
+   (auxilio emergencial da pandemia), enquanto o resto do governo ficou
+   estavel ou caiu - Educacao -4,5%, Ciencia e Tecnologia -12,4%,
+   Transportes -23,5%. Não foi "o governo gastando mais em geral", foi um
+   programa especifico.
+3. **A reversão confirma a causa:** assim que o auxilio parou, o gasto
+   total caiu **28,4% em 2021**, a maior queda da serie.
+4. **Concentração:** em 2025, só 3 ministerios (Saude, Educacao,
+   Desenvolvimento Social) respondem por **76,2%** de tudo que foi gasto
+   pelos 8 acompanhados.
+5. **Volatilidade:** o orcamento do Desenvolvimento Social é o mais
+   errático da serie (variação de 57% entre anos, sensivel a politica de
+   transferencia de renda). Defesa é o mais estavel (6%), orcamento mais
+   institucional e previsivel.
+
+Esses numeros aparecem como cards automaticos no dashboard (seção
+"Principais insights do periodo") - eles recalculam sozinhos se voce
+rodar o pipeline pra mais anos, não são valores fixos no codigo.
+
+**Ressalva de rigor:** a API devolve o nome *atual* do ministerio pro
+codigo SIAFI, mesmo em anos antigos - então "Ministerio do Desenvolvimento
+e Assistencia Social" aparece com esse nome ate em 2019, embora a pasta já
+tenha mudado de nome mais de uma vez desde então. Não é erro no dado, é só
+como a API trata reestruturação ministerial.
+
 ## Rodando localmente
 
 1. Clona o repo e instala as dependencias:
