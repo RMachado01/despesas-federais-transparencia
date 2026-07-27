@@ -1,4 +1,4 @@
 [
-    {"orgao": "Ministerio da Educacao", "valor": "150.000,00"},
-    {"orgao": "Ministerio da Saude", "valor": "320.500,75"}
+    {"ano": 2024, "orgao": "Fundo Nacional de Desenvolvimento da Educacao", "codigoOrgao": "26298", "orgaoSuperior": "Ministerio da Educacao", "codigoOrgaoSuperior": "26000", "empenhado": "94.588.918.368,01", "liquidado": "77.786.388.029,39", "pago": "150.000,00"},
+    {"ano": 2024, "orgao": "Fundacao Oswaldo Cruz", "codigoOrgao": "36212", "orgaoSuperior": "Ministerio da Saude", "codigoOrgaoSuperior": "36000", "empenhado": "5.000.000,00", "liquidado": "4.500.000,00", "pago": "320.500,75"}
 ]

@@ -1,5 +1,7 @@
 # Portal da Transparência ETL + Dashboard — Design
 
+> **Nota pós-implementação (2026-07-27):** ao testar com um token real, descobrimos que o endpoint `despesas/por-orgao` não tem filtro de mês (só `ano` + `orgaoSuperior`). O plano de granularidade mensal descrito abaixo foi revisado para granularidade anual durante a implementação — ver `docs/superpowers/plans/2026-07-27-portal-transparencia-etl-dashboard.md` e o README para o desenho final.
+
 ## Objetivo
 
 Projeto de portfólio para vaga de Data Engineer: pipeline ETL que extrai dados de despesas públicas federais da API do Portal da Transparência, transforma em um modelo analítico simples e apresenta em um dashboard Streamlit. Equilíbrio entre engenharia de pipeline sólida e um dashboard apresentável — nenhum dos dois é apenas decorativo.
