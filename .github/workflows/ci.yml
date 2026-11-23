@@ -1,9 +1,9 @@
-# Roda os testes a cada push no main e em todo pull request.
+# Roda os testes a cada push no master e em todo pull request.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
 
 jobs:
