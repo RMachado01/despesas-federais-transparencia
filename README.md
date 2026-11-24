@@ -1,127 +1,125 @@
-# Despesas Federais - Portal da Transparencia
+# Despesas Federais — Portal da Transparência
 
-Projeto pessoal pra praticar pipeline de dados: pego despesas publicas
-federais na API do Portal da Transparencia, arrumo os dados e jogo num
-dashboard.
+[![CI](https://github.com/RMachado01/despesas-federais-transparencia/actions/workflows/ci.yml/badge.svg)](https://github.com/RMachado01/despesas-federais-transparencia/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?logo=duckdb&logoColor=black)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
 
-Fiz esse projeto pra ter algo pra mostrar em processo seletivo de Data
-Engineer, focando em ter um pipeline que funciona de ponta a ponta com
-dado real (não so um notebook bonito com CSV baixado uma vez).
+Pipeline de dados de ponta a ponta com **dados reais** da API do Portal da
+Transparência: extrai as despesas públicas federais por ministério, limpa e
+normaliza, grava num warehouse analítico em DuckDB e publica um dashboard em
+Streamlit que **calcula os insights sozinho** (crescimento composto, saltos
+isolados, concentração e volatilidade) a cada nova carga.
+
+![Dashboard de despesas federais](docs/dashboard.png)
 
 ## Como funciona
 
 ```text
-API do Portal da Transparencia
-    -> src/extract   (baixa e salva o JSON cru, por ano + ministerio)
-    -> src/transform  (limpa e normaliza)
-    -> src/load       (grava no duckdb)
-    -> run_pipeline.py (roda tudo isso em sequencia, por ano)
-    -> app/streamlit_app.py (dashboard que le do duckdb)
+API do Portal da Transparência
+    -> src/extract     baixa e salva o JSON cru, por ano + ministério (com retry)
+    -> src/transform   limpa e normaliza
+    -> src/load        grava no DuckDB (idempotente: recarregar um ano não duplica)
+    -> run_pipeline.py orquestra tudo em sequência, por ano
+    -> app/streamlit_app.py  dashboard que lê do DuckDB
 ```
 
-Usei DuckDB porque roda embutido (não precisa instalar banco nenhum) e é
-rapido pra esse tipo de consulta analitica. Nao usei Airflow nem nada
-parecido de proposito - pro tamanho desse projeto, um script python
-sequencial com log decente resolve, e um orquestrador ia ser complexidade
-sem necessidade.
+**Decisões de projeto**
 
-### Detalhe que só descobri testando com token de verdade
+- **DuckDB** porque roda embutido (não precisa subir banco) e é rápido para
+  consulta analítica.
+- **Sem Airflow de propósito:** para o tamanho deste projeto, um script
+  sequencial com log decente resolve. Um orquestrador seria complexidade sem
+  necessidade.
+- **Valor = `pago`:** a API devolve três estágios por registro (`empenhado`,
+  `liquidado` e `pago`). Uso `pago`, que é o mais próximo de "dinheiro que
+  realmente saiu do caixa".
 
-O plano original era puxar despesa mes a mes. Só que o endpoint
-`despesas/por-orgao` da API **não tem filtro de mes** - ele só aceita
-`ano` (obrigatorio) + `pagina`, e exige informar um `orgaoSuperior`
-(codigo SIAFI do ministerio) junto, senão devolve erro 400 dizendo que
-falta filtro minimo.
+### O que só descobri testando com token de verdade
 
-Então o pipeline mudou de granularidade mensal pra anual, e passou a
-rodar um loop por uma lista fixa de ministerios (`ORGAOS_SUPERIORES` em
-`src/extract/client.py`). No fim ficou melhor pro dashboard - comparação
-ano a ano é o que mais se usa em analise de gasto publico mesmo, mes a
-mes ia gerar ruido.
+O plano original era puxar a despesa mês a mês. Só que o endpoint
+`despesas/por-orgao` **não tem filtro de mês**: aceita apenas `ano`
+(obrigatório) + `pagina` e exige um `orgaoSuperior` (código SIAFI do
+ministério), senão devolve erro 400 por falta de filtro mínimo.
 
-A API tambem devolve tres estagios de despesa por registro: `empenhado`,
-`liquidado` e `pago`. Uso `pago` como "valor" no dashboard, que é o
-numero mais proximo de "dinheiro que realmente saiu do caixa".
+Por isso o pipeline mudou de granularidade mensal para anual e passou a fazer
+um loop por uma lista de ministérios (`ORGAOS_SUPERIORES` em
+`src/extract/client.py`). No fim ficou melhor para o dashboard: comparação
+ano a ano é o que mais se usa em análise de gasto público, e mês a mês geraria
+ruído.
 
-## Principais insights (dados reais, 2019-2025)
-
-Isso não é só um pipeline que funciona - o dado real conta uma historia.
-Rodei os numeros de tras dos 8 ministerios configurados e achei isso:
+## Principais insights (dados reais, 2019–2025)
 
 1. **Crescimento composto de 10,7% ao ano** entre 2019 e 2025 (CAGR).
-2. **O salto de 2020 (+72% num ano só) tem uma causa isolada:** o
-   Ministerio do Desenvolvimento Social cresceu **759%** naquele ano
-   (auxilio emergencial da pandemia), enquanto o resto do governo ficou
-   estavel ou caiu - Educacao -4,5%, Ciencia e Tecnologia -12,4%,
-   Transportes -23,5%. Não foi "o governo gastando mais em geral", foi um
-   programa especifico.
-3. **A reversão confirma a causa:** assim que o auxilio parou, o gasto
-   total caiu **28,4% em 2021**, a maior queda da serie.
-4. **Concentração:** em 2025, só 3 ministerios (Saude, Educacao,
-   Desenvolvimento Social) respondem por **76,2%** de tudo que foi gasto
-   pelos 8 acompanhados.
-5. **Volatilidade:** o orcamento do Desenvolvimento Social é o mais
-   errático da serie (variação de 57% entre anos, sensivel a politica de
-   transferencia de renda). Defesa é o mais estavel (6%), orcamento mais
-   institucional e previsivel.
+2. **O salto de 2020 (+72% num ano) tem uma causa isolada:** o Ministério do
+   Desenvolvimento Social cresceu **759%** naquele ano (auxílio emergencial da
+   pandemia), enquanto o resto ficou estável ou caiu — Educação −4,5%, Ciência
+   e Tecnologia −12,4%, Transportes −23,5%. Não foi "o governo gastando mais em
+   geral", foi um programa específico.
+3. **A reversão confirma a causa:** quando o auxílio acabou, o gasto total caiu
+   **28,4% em 2021**, a maior queda da série.
+4. **Concentração:** em 2025, três ministérios (Saúde, Educação e
+   Desenvolvimento Social) respondem por **76,2%** do gasto dos 8 acompanhados.
+5. **Volatilidade:** Desenvolvimento Social tem o orçamento mais errático
+   (coeficiente de variação de 57%, sensível à política de transferência de
+   renda). Defesa é o mais estável (6%).
 
-Esses numeros aparecem como cards automaticos no dashboard (seção
-"Principais insights do periodo") - eles recalculam sozinhos se voce
-rodar o pipeline pra mais anos, não são valores fixos no codigo.
+Esses números aparecem como cards no dashboard ("Principais insights do
+período") e **são recalculados automaticamente** quando o pipeline carrega
+novos anos — não são valores fixos no código.
 
-**Ressalva de rigor:** a API devolve o nome *atual* do ministerio pro
-codigo SIAFI, mesmo em anos antigos - então "Ministerio do Desenvolvimento
-e Assistencia Social" aparece com esse nome ate em 2019, embora a pasta já
-tenha mudado de nome mais de uma vez desde então. Não é erro no dado, é só
-como a API trata reestruturação ministerial.
+> **Ressalva:** a API devolve o nome *atual* do ministério para cada código
+> SIAFI, mesmo em anos antigos. Por isso "Ministério do Desenvolvimento e
+> Assistência Social" aparece com esse nome até em 2019. Não é erro no dado, é
+> como a API trata reestruturação ministerial.
 
 ## Rodando localmente
 
-1. Clona o repo e instala as dependencias:
+```bash
+pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+O repositório já traz um `data/warehouse.duckdb` com dados reais de 2019 a
+2025, então o dashboard abre direto.
+
+### Atualizando os dados
+
+1. Crie um token gratuito em
+   <https://api.portaldatransparencia.gov.br/swagger-ui.html> (botão de
+   cadastro no canto da página; o token chega por e-mail).
+2. Copie `.env.example` para `.env` e coloque o token.
+3. Rode o pipeline para os anos que quiser:
 
    ```bash
-   pip install -r requirements.txt
+   python run_pipeline.py --ano 2025
+   python run_pipeline.py --ano 2020 --ano 2021 --ano 2022
    ```
 
-2. O repo ja vem com um `data/warehouse.duckdb` de exemplo, populado com
-   dados reais de 2019 a 2025 pros ministerios configurados, entao da pra
-   rodar o dashboard direto:
+   Os dados daquele ano são substituídos no warehouse (pode rodar quantas vezes
+   quiser, não duplica).
 
-   ```bash
-   streamlit run app/streamlit_app.py
-   ```
-
-3. Se quiser atualizar com dados mais recentes (ou outro ano):
-
-   - Cria um token gratuito em <https://api.portaldatransparencia.gov.br/swagger-ui.html>
-     (tem um botao de cadastro no canto da pagina, confirma o email e o
-     token chega/aparece na area logada)
-   - Copia `.env.example` pra `.env` e coloca o token
-   - Roda o pipeline pro ano que quiser (da pra passar `--ano` mais de uma vez):
-
-     ```bash
-     python run_pipeline.py --ano 2025
-     python run_pipeline.py --ano 2020 --ano 2021 --ano 2022
-     ```
-
-   - Isso substitui os dados daquele ano no `data/warehouse.duckdb` (roda de
-     novo quantas vezes quiser, não duplica).
-
-## Rodando os testes
+## Testes
 
 ```bash
 pip install -r requirements-dev.txt
 pytest -v
 ```
 
-## O que da pra melhorar
+Os testes cobrem extração (incluindo retry e erros 4xx, com a API simulada via
+`responses`), limpeza, carga no DuckDB e o pipeline completo. Rodam no GitHub
+Actions a cada push e pull request.
 
-Coisas que ficaram de fora por tempo, mas que eu faria numa v2:
+## Próximos passos
 
-- Puxar a lista de ministerios dinamicamente do endpoint `orgaos-siafi`
-  em vez de uma lista fixa no codigo
-- Endpoint mais granular (despesas por documento) pra dar pra filtrar por
-  favorecido especifico, não so por entidade vinculada
-- Deploy automatico do pipeline (hoje o dado do dashboard publicado é um
-  snapshot, não atualiza sozinho)
-- Mais testes de erro da API (hoje so testei os casos de retry e 4xx puro)
+- Buscar a lista de ministérios dinamicamente no endpoint `orgaos-siafi` em vez
+  de uma lista fixa.
+- Usar um endpoint mais granular (despesas por documento) para filtrar por
+  favorecido.
+- Agendar o pipeline (hoje o dashboard publicado é um snapshot).
+- Ampliar os testes de erro da API.
+
+## Fonte dos dados
+
+[Portal da Transparência](https://portaldatransparencia.gov.br/) —
+Controladoria-Geral da União (CGU).
